@@ -7,108 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gym Tracker | Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #121212;
-            /* Dark Cinematic Background */
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        /* Navigation Bar */
-        nav {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 20px 0;
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        nav a {
-            color: #bbb;
-            text-decoration: none;
-            font-weight: bold;
-            transition: 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        nav a:hover,
-        nav a.active {
-            color: #ff4d4d;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 800px;
-            padding: 40px 0;
-        }
-
-        /* The Glass Card for the Graph */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        }
-
-        h1 {
-            text-align: center;
-            letter-spacing: 2px;
-            margin-bottom: 30px;
-        }
-
-        /* Form Styling */
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        input {
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 16px;
-            outline: none;
-        }
-
-        input:focus {
-            border-color: #ff4d4d;
-        }
-
-        button {
-            padding: 15px;
-            border-radius: 10px;
-            border: none;
-            background: #ff4d4d;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
-
-        button:hover {
-            background: #ff1a1a;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 77, 77, 0.4);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -123,14 +22,14 @@
         <h1>COMMAND CENTER</h1>
 
         <div class="glass-card">
-            <h3 style="margin-top:0; color: #ff4d4d;">Strength Progress</h3>
+            <h3>Strength Progress</h3>
             <div style="height: 300px;">
                 <canvas id="progressChart"></canvas>
             </div>
         </div>
 
         <div class="glass-card">
-            <h3 style="margin-top:0;">Log Your Lift</h3>
+            <h3>Log Your Lift</h3>
             <form id="workout-form">
                 <input type="text" id="exercise-name" placeholder="Which Exercise? (e.g. Deadlift)" required>
                 <div style="display: flex; gap: 10px;">
@@ -152,8 +51,8 @@
 
                     // Create gradients for the cinematic look
                     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(255, 77, 77, 0.5)');
-                    gradient.addColorStop(1, 'rgba(255, 77, 77, 0)');
+                    gradient.addColorStop(0, 'rgba(0, 180, 216, 0.5)');
+                    gradient.addColorStop(1, 'rgba(0, 180, 216, 0)');
 
                     new Chart(ctx, {
                         type: 'line',
@@ -162,12 +61,12 @@
                             datasets: [{
                                 label: 'Max Weight (kg)',
                                 data: data.map(item => item.max_weight),
-                                borderColor: '#ff4d4d',
+                                borderColor: '#00b4d8',
                                 borderWidth: 3,
                                 tension: 0.4,
                                 fill: true,
                                 backgroundColor: gradient,
-                                pointBackgroundColor: '#ff4d4d'
+                                pointBackgroundColor: '#00b4d8'
                             }]
                         },
                         options: {
