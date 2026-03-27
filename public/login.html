@@ -24,14 +24,36 @@
 
     <script>
         function handleLogin() {
-            const card = document.querySelector('.login-card');
-            card.style.transition = "0.5s";
-            card.style.opacity = "0";
-            card.style.transform = "scale(0.9)";
+            const usernameInput = document.getElementById('username').value.trim();
+            if(!usernameInput) {
+                alert("Please enter a username string!");
+                return;
+            }
 
-            setTimeout(() => {
-                window.location.href = '/dashboard'; // This tells the bridge to give us index.html
-            }, 500);
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: usernameInput })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.userId) {
+                    localStorage.setItem('userId', data.userId);
+                    localStorage.setItem('username', data.username);
+                    
+                    const card = document.querySelector('.login-card');
+                    card.style.transition = "0.5s";
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.9)";
+
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 500);
+                } else {
+                    alert("Login failed.");
+                }
+            })
+            .catch(err => console.error("Login Server Error", err));
         }
     </script>
 </body>

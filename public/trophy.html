@@ -17,8 +17,13 @@
     </div>
 
     <script>
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            window.location.href = '/'; 
+        }
+
         // Fetch the PRs from our Bridge (server.js)
-        fetch('/api/personal-records')
+        fetch('/api/personal-records?userId=' + userId)
             .then(res => res.json())
             .then(data => {
                 const container = document.getElementById('trophy-container');
