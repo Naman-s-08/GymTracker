@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Tracker | Welcome</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="welcome-page">
+    <div class="welcome-container glass-card">
+        <!-- Animated Character -->
+        <div class="animated-character">
+            <div class="character-body">
+                <div class="character-eye"></div>
+            </div>
+            <div class="character-shadow"></div>
+        </div>
+
+        <!-- Motivational Quote -->
+        <h1 class="motivational-quote" id="quote-text">"The hard part isn't getting your body in shape. The hard part is getting your mind in shape."</h1>
+        <p class="author" id="quote-author">- Amby Burfoot</p>
+
+        <!-- Click to Enter Button -->
+        <a href="/dashboard" class="enter-btn btn-auto" onclick="animateExit(event)">Click to Enter</a>
+    </div>
+
+    <script>
+        const quotes = [
+            { text: "The hard part isn't getting your body in shape. The hard part is getting your mind in shape.", author: "Amby Burfoot" },
+            { text: "Your body can stand almost anything. It's your mind that you have to convince.", author: "Unknown" },
+            { text: "Success starts with self-discipline.", author: "Unknown" },
+            { text: "The only bad workout is the one that didn't happen.", author: "Unknown" },
+            { text: "Wake up with determination. Go to bed with satisfaction.", author: "George Lorimer" },
+            { text: "Discipline is doing what you hate to do, but nonetheless doing it like you love it.", author: "Mike Tyson" }
+        ];
+
+        // Randomly pick a quote
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        document.getElementById('quote-text').innerText = `"${randomQuote.text}"`;
+        document.getElementById('quote-author').innerText = `- ${randomQuote.author}`;
+
+        function animateExit(e) {
+            e.preventDefault();
+            const container = document.querySelector('.welcome-container');
+            container.style.transition = "0.5s ease-in-out";
+            container.style.opacity = "0";
+            container.style.transform = "scale(1.1)";
+            container.style.filter = "blur(10px)";
+            
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 500);
+        }
+    </script>
+</body>
+</html>

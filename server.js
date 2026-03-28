@@ -22,6 +22,9 @@ db.connect(err => {
 
 // 2. SERVE THE PAGES
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/public/login.html', (req, res) => res.redirect('/login'));
+app.get('/welcome', (req, res) => res.sendFile(path.join(__dirname, 'public', 'welcome.html')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/trophies', (req, res) => res.sendFile(path.join(__dirname, 'public', 'trophy.html')));
 app.use(express.static('public', { index: false }));

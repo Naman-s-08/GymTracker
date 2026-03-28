@@ -244,3 +244,154 @@ button:hover {
     transform: none;
     box-shadow: none;
 }
+
+/* WELCOME PAGE EXTENSIONS */
+body.welcome-page {
+    justify-content: center;
+    background: radial-gradient(circle at center, var(--bg-dark) 0%, #000 100%);
+    overflow: hidden;
+    position: relative;
+}
+
+.welcome-container {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    animation: fadeInScale 1s ease-out;
+    padding: 60px 40px;
+    max-width: 800px;
+    width: 90%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.motivational-quote {
+    font-size: 2.2rem;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text-main);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 180, 216, 0.3);
+    line-height: 1.4;
+}
+
+.author {
+    font-size: 1.2rem;
+    color: var(--accent-light);
+    margin-bottom: 50px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Custom CSS Animated Character */
+.animated-character {
+    width: 150px;
+    height: 180px;
+    margin: 0 auto 40px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.character-body {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(145deg, var(--accent-light), var(--accent-hover));
+    border-radius: 40% 40% 50% 50%;
+    box-shadow: 0 0 30px rgba(0, 180, 216, 0.6), inset 0 -10px 20px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+    animation: floatCharacter 3s ease-in-out infinite, characterBreathe 2s ease-in-out infinite alternate;
+    z-index: 2;
+}
+
+.character-eye {
+    width: 50px;
+    height: 15px;
+    background: #fff;
+    border-radius: 10px;
+    position: absolute;
+    top: 40px;
+    left: 35px;
+    box-shadow: 0 0 20px #fff, 0 0 40px #fff;
+    animation: blink 4s infinite, eyeMove 6s ease-in-out infinite alternate;
+}
+
+.character-shadow {
+    width: 80px;
+    height: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 0;
+    filter: blur(5px);
+    animation: shadowPulse 3s ease-in-out infinite;
+}
+
+@keyframes floatCharacter {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes characterBreathe {
+    0% { transform: scaleX(1) scaleY(1); }
+    100% { transform: scaleX(1.05) scaleY(0.95); }
+}
+
+@keyframes eyeMove {
+    0%, 10% { transform: translateX(0); }
+    20%, 30% { transform: translateX(10px); }
+    40%, 50% { transform: translateX(-10px); }
+    60%, 100% { transform: translateX(0); }
+}
+
+@keyframes shadowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(0.6); opacity: 0.2; }
+}
+
+.enter-btn {
+    display: inline-block;
+    padding: 18px 50px;
+    border-radius: 30px;
+    background: transparent;
+    border: 2px solid var(--accent-light);
+    color: var(--text-main);
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.enter-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background: var(--accent-light);
+    transition: width 0.4s ease;
+    z-index: -1;
+}
+
+.enter-btn:hover::before {
+    width: 100%;
+}
+
+.enter-btn:hover {
+    color: #fff;
+    box-shadow: 0 0 30px rgba(0, 180, 216, 0.8);
+    transform: translateY(-5px);
+}

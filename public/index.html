@@ -56,7 +56,7 @@
         }
 
         // Add a small welcome text
-        document.querySelector('h1').innerHTML = `COMMAND CENTER <br><span style="font-size: 0.5em; color: var(--accent-light);">Welcome, ${username}</span>`;
+        document.querySelector('h1').innerHTML = `DASHBOARD' <br><span style="font-size: 0.5em; color: var(--accent-light);">Welcome, ${username}</span>`;
 
         // 1. FETCH PR DATA AND DRAW THE GRAPH
         let currentChart = null;
@@ -133,7 +133,7 @@
                 .then(res => res.json())
                 .then(data => {
                     const container = document.getElementById('recent-sets-container');
-                    if(data.length === 0) {
+                    if (data.length === 0) {
                         container.innerHTML = "<p style='color: #bbb;'>No recent activity. Get lifting!</p>";
                         return;
                     }
@@ -150,13 +150,13 @@
         }
 
         // 4. DELETE A SET
-        window.deleteSet = function(setId) {
-            if(!confirm("Are you sure you want to delete this set?")) return;
-            
+        window.deleteSet = function (setId) {
+            if (!confirm("Are you sure you want to delete this set?")) return;
+
             fetch('/api/delete-set/' + setId, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
-                    if(data.success) {
+                    if (data.success) {
                         loadChart();
                         loadRecentSets();
                     }
