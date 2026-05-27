@@ -1,53 +1,148 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Gym Tracker | Trophy Room</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymTracker | Trophy Room</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
-
 <body>
-    <button class="btn-auto" onclick="window.location.href='/dashboard'">Back to Gym</button>
-    <h1>HALL OF FAME</h1>
-    <p>Your Personal Records</p>
 
-    <div class="trophy-grid" id="trophy-container">
-    </div>
+  <nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/trophies" class="active">Trophy Room</a>
+    <a href="#" id="logout-btn">Logout</a>
+  </nav>
 
-    <script>
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-            window.location.href = '/'; 
+  <div class="container">
+    <h1>HALL OF FAME<br><span>Your Personal Records</span></h1>
+    <p id="trophy-count" style="text-align: center; color: var(--text-secondary); margin-bottom: 24px; font-size: 0.95rem;"></p>
+    <div class="trophy-grid" id="trophy-container"></div>
+  </div>
+
+  <script>
+    // ─── Auth Helper ────────────────────────────────────────
+    const Auth = {
+      getToken: () => localStorage.getItem('gymtoken'),
+      getUser: () => JSON.parse(localStorage.getItem('gymuser') || 'null'),
+      setAuth: (token, user) => {
+        localStorage.setItem('gymtoken', token);
+        localStorage.setItem('gymuser', JSON.stringify(user));
+      },
+      clear: () => {
+        localStorage.removeItem('gymtoken');
+        localStorage.removeItem('gymuser');
+      },
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('gymtoken')
+      }),
+      requireAuth: () => {
+        if (!localStorage.getItem('gymtoken')) {
+          window.location.href = '/login';
+          return false;
+        }
+        return true;
+      }
+    };
+
+    // ─── Toast Notifications ────────────────────────────────
+    function showToast(message, type = 'info') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const icons = { success: '✓', error: '✕', info: 'ℹ' };
+      toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-message">${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
+    }
+
+    // ─── Fetch Helper ───────────────────────────────────────
+    async function apiFetch(url, options = {}) {
+      const headers = { 'Authorization': 'Bearer ' + Auth.getToken() };
+      if (options.body) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        Auth.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
+      return res;
+    }
+
+    // ─── Auth Gate ──────────────────────────────────────────
+    Auth.requireAuth();
+
+    // ─── Logout ─────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      Auth.clear();
+      window.location.href = '/login';
+    });
+
+    // ─── Load Trophies ──────────────────────────────────────
+    async function loadTrophies() {
+      const container = document.getElementById('trophy-container');
+      const countEl = document.getElementById('trophy-count');
+
+      try {
+        const res = await apiFetch('/api/personal-records');
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+          countEl.textContent = '';
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <p>No records yet. Hit the gym and set some PRs! 🏆</p>
+            </div>
+          `;
+          return;
         }
 
-        // Fetch the PRs from our Bridge (server.js)
-        fetch('/api/personal-records?userId=' + userId)
-            .then(res => res.json())
-            .then(data => {
-                const container = document.getElementById('trophy-container');
-                if (data.length === 0) {
-                    container.innerHTML = "<h3>No records found. Go lift some weights!</h3>";
-                }
-                data.forEach(record => {
-                    container.innerHTML += `
-                    <div class="card">
-                        <div class="card-inner">
-                            <div class="card-front">
-                                <div class="medal">🏆</div>
-                                <h3>${record.exercise_name}</h3>
-                            </div>
-                            <div class="card-back">
-                                <h1>${record.max_weight} kg</h1>
-                                <p>PERSONAL BEST</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                });
-            });
-    </script>
-</body>
+        countEl.textContent = `${data.length} exercise${data.length !== 1 ? 's' : ''} mastered`;
 
+        container.innerHTML = data.map((record, index) => `
+          <div class="card" style="animation-delay: ${index * 0.1}s;">
+            <div class="card-inner">
+              <div class="card-front">
+                <div style="font-size: 2.5rem; margin-bottom: 12px;">🏆</div>
+                <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">${record.exercise_name}</div>
+              </div>
+              <div class="card-back">
+                <div style="font-size: 2.2rem; font-weight: 800; color: var(--accent-primary); margin-bottom: 8px;">${record.max_weight} kg</div>
+                <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-secondary); font-weight: 600;">Personal Best</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <p>Failed to load records. Please try again.</p>
+            </div>
+          `;
+          showToast('Failed to load personal records.', 'error');
+        }
+      }
+    }
+
+    // ─── Initialize ─────────────────────────────────────────
+    loadTrophies();
+  </script>
+</body>
 </html>

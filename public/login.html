@@ -1,61 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Tracker | Login</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymTracker | Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
-
 <body class="login-page">
 
-    <div class="login-card">
-        <h2>Enter the Vault</h2>
-        <div class="input-group">
-            <input type="text" id="username" placeholder="Username">
-        </div>
-        <div class="input-group">
-            <input type="password" id="password" placeholder="Password">
-        </div>
-        <button onclick="handleLogin()">Login</button>
-        <p class="footer-text">Built for the GymRats | Train hard or stay the same</p>
+  <div class="login-card" id="login-card">
+    <div class="login-logo">
+      <div style="font-size: 3.5rem; margin-bottom: 8px;">🏋️</div>
+      <h2>GymTracker</h2>
     </div>
 
-    <script>
-        function handleLogin() {
-            const usernameInput = document.getElementById('username').value.trim();
-            if(!usernameInput) {
-                alert("Please enter a username string!");
-                return;
-            }
+    <div class="auth-toggle">
+      <button class="auth-toggle-btn active" id="toggle-login" type="button">Login</button>
+      <button class="auth-toggle-btn" id="toggle-signup" type="button">Sign Up</button>
+    </div>
 
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: usernameInput })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.userId) {
-                    localStorage.setItem('userId', data.userId);
-                    localStorage.setItem('username', data.username);
-                    
-                    const card = document.querySelector('.login-card');
-                    card.style.transition = "0.5s";
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.9)";
+    <form id="auth-form" novalidate>
+      <div class="input-group">
+        <label class="input-label" for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter username" required autocomplete="username" />
+      </div>
 
-                    setTimeout(() => {
-                        window.location.href = '/welcome';
-                    }, 500);
-                } else {
-                    alert("Login failed.");
-                }
-            })
-            .catch(err => console.error("Login Server Error", err));
+      <div class="input-group signup-field" style="display:none">
+        <label class="input-label" for="email">Email</label>
+        <input type="email" id="email" placeholder="Enter email" autocomplete="email" />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password" />
+      </div>
+
+      <div class="input-group signup-field" style="display:none">
+        <label class="input-label" for="confirm-password">Confirm Password</label>
+        <input type="password" id="confirm-password" placeholder="Confirm password" autocomplete="new-password" />
+      </div>
+
+      <div class="signup-field" style="display:none">
+        <div class="password-strength">
+          <div class="password-strength-bar" id="strength-bar"></div>
+        </div>
+      </div>
+
+      <div id="form-error-container"></div>
+
+      <button type="submit" id="auth-submit-btn">Login</button>
+    </form>
+
+    <div class="footer-text">Built for the Gym Rats | Train Hard or Stay the Same</div>
+  </div>
+
+  <script>
+    // ─── Auth Helper ────────────────────────────────────────
+    const Auth = {
+      getToken: () => localStorage.getItem('gymtoken'),
+      getUser: () => JSON.parse(localStorage.getItem('gymuser') || 'null'),
+      setAuth: (token, user) => {
+        localStorage.setItem('gymtoken', token);
+        localStorage.setItem('gymuser', JSON.stringify(user));
+      },
+      clear: () => {
+        localStorage.removeItem('gymtoken');
+        localStorage.removeItem('gymuser');
+      },
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('gymtoken')
+      }),
+      requireAuth: () => {
+        if (!localStorage.getItem('gymtoken')) {
+          window.location.href = '/login';
+          return false;
         }
-    </script>
-</body>
+        return true;
+      }
+    };
 
+    // ─── Toast for login page ───────────────────────────────
+    function showLoginToast(message, type = 'error') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const icons = { success: '✓', error: '✕', info: 'ℹ' };
+      toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-message">${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
+    }
+
+    // ─── Redirect if already logged in ──────────────────────
+    if (Auth.getToken()) {
+      window.location.href = '/welcome';
+    }
+
+    // ─── State ──────────────────────────────────────────────
+    let isSignup = false;
+
+    const toggleLoginBtn = document.getElementById('toggle-login');
+    const toggleSignupBtn = document.getElementById('toggle-signup');
+    const signupFields = document.querySelectorAll('.signup-field');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    const strengthBar = document.getElementById('strength-bar');
+    const authForm = document.getElementById('auth-form');
+    const loginCard = document.getElementById('login-card');
+    const errorContainer = document.getElementById('form-error-container');
+
+    // ─── Toggle Login / Signup ──────────────────────────────
+    function setMode(signup) {
+      isSignup = signup;
+      toggleLoginBtn.classList.toggle('active', !signup);
+      toggleSignupBtn.classList.toggle('active', signup);
+      signupFields.forEach(el => { el.style.display = signup ? 'block' : 'none'; });
+      submitBtn.textContent = signup ? 'Create Account' : 'Login';
+      passwordInput.autocomplete = signup ? 'new-password' : 'current-password';
+      clearError();
+    }
+
+    toggleLoginBtn.addEventListener('click', () => setMode(false));
+    toggleSignupBtn.addEventListener('click', () => setMode(true));
+
+    // ─── Password Strength ─────────────────────────────────
+    passwordInput.addEventListener('input', () => {
+      if (!isSignup) return;
+      const len = passwordInput.value.length;
+      if (len === 0) {
+        strengthBar.style.width = '0%';
+        strengthBar.className = 'password-strength-bar';
+        return;
+      }
+      if (len < 6) {
+        strengthBar.style.width = '33%';
+        strengthBar.className = 'password-strength-bar weak';
+      } else if (len < 10) {
+        strengthBar.style.width = '66%';
+        strengthBar.className = 'password-strength-bar medium';
+      } else {
+        strengthBar.style.width = '100%';
+        strengthBar.className = 'password-strength-bar strong';
+      }
+    });
+
+    // ─── Error display ──────────────────────────────────────
+    function showError(msg) {
+      clearError();
+      const errDiv = document.createElement('div');
+      errDiv.className = 'form-error';
+      errDiv.textContent = msg;
+      errorContainer.appendChild(errDiv);
+    }
+
+    function clearError() {
+      errorContainer.innerHTML = '';
+    }
+
+    // ─── Form Submission ────────────────────────────────────
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const username = document.getElementById('username').value.trim();
+      const password = passwordInput.value;
+
+      if (!username || !password) {
+        showError('Please fill in all required fields.');
+        return;
+      }
+
+      if (isSignup) {
+        const email = document.getElementById('email').value.trim();
+        const confirmPass = confirmPasswordInput.value;
+
+        if (!email) {
+          showError('Email is required for sign up.');
+          return;
+        }
+
+        if (password !== confirmPass) {
+          showError('Passwords do not match.');
+          return;
+        }
+
+        if (password.length < 6) {
+          showError('Password must be at least 6 characters.');
+          return;
+        }
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Creating Account...';
+          const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showError(data.message || data.error || 'Registration failed.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
+            return;
+          }
+          Auth.setAuth(data.token, data.user);
+          animateCardOut();
+        } catch (err) {
+          showError('Network error. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Account';
+        }
+      } else {
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Logging in...';
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showError(data.message || data.error || 'Login failed.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
+            return;
+          }
+          Auth.setAuth(data.token, data.user);
+          animateCardOut();
+        } catch (err) {
+          showError('Network error. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Login';
+        }
+      }
+    });
+
+    // ─── Card Exit Animation ────────────────────────────────
+    function animateCardOut() {
+      loginCard.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      loginCard.style.opacity = '0';
+      loginCard.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        window.location.href = '/welcome';
+      }, 450);
+    }
+
+    // ─── Enter key on password submits ──────────────────────
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !isSignup) {
+        authForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  </script>
+</body>
 </html>

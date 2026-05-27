@@ -1,56 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Tracker | Welcome</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymTracker | Welcome</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
 <body class="welcome-page">
-    <div class="welcome-container glass-card">
-        <!-- Animated Character -->
-        <div class="animated-character">
-            <div class="character-body">
-                <div class="character-eye"></div>
-            </div>
-            <div class="character-shadow"></div>
-        </div>
 
-        <!-- Motivational Quote -->
-        <h1 class="motivational-quote" id="quote-text">"The hard part isn't getting your body in shape. The hard part is getting your mind in shape."</h1>
-        <p class="author" id="quote-author">- Amby Burfoot</p>
-
-        <!-- Click to Enter Button -->
-        <a href="/dashboard" class="enter-btn btn-auto" onclick="animateExit(event)">Click to Enter</a>
+  <div class="welcome-container glass-card" id="welcome-container">
+    <div class="animated-character">
+      <div class="character-body">
+        <div class="character-eye"></div>
+      </div>
+      <div class="character-shadow"></div>
     </div>
 
-    <script>
-        const quotes = [
-            { text: "The hard part isn't getting your body in shape. The hard part is getting your mind in shape.", author: "Amby Burfoot" },
-            { text: "Your body can stand almost anything. It's your mind that you have to convince.", author: "Unknown" },
-            { text: "Success starts with self-discipline.", author: "Unknown" },
-            { text: "The only bad workout is the one that didn't happen.", author: "Unknown" },
-            { text: "Wake up with determination. Go to bed with satisfaction.", author: "George Lorimer" },
-            { text: "Discipline is doing what you hate to do, but nonetheless doing it like you love it.", author: "Mike Tyson" }
-        ];
+    <h1 class="motivational-quote" id="quote-text">The only bad workout is the one that didn't happen.</h1>
+    <p class="author" id="quote-author">— Unknown</p>
 
-        // Randomly pick a quote
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        document.getElementById('quote-text').innerText = `"${randomQuote.text}"`;
-        document.getElementById('quote-author').innerText = `- ${randomQuote.author}`;
+    <p id="greeting" style="color: var(--text-secondary); margin-bottom: 30px; font-size: 1.1rem;">
+      Ready to crush it?
+    </p>
 
-        function animateExit(e) {
-            e.preventDefault();
-            const container = document.querySelector('.welcome-container');
-            container.style.transition = "0.5s ease-in-out";
-            container.style.opacity = "0";
-            container.style.transform = "scale(1.1)";
-            container.style.filter = "blur(10px)";
-            
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 500);
+    <a href="/dashboard" class="enter-btn" onclick="animateExit(event)">Enter the Gym →</a>
+  </div>
+
+  <script>
+    // ─── Auth Helper ────────────────────────────────────────
+    const Auth = {
+      getToken: () => localStorage.getItem('gymtoken'),
+      getUser: () => JSON.parse(localStorage.getItem('gymuser') || 'null'),
+      setAuth: (token, user) => {
+        localStorage.setItem('gymtoken', token);
+        localStorage.setItem('gymuser', JSON.stringify(user));
+      },
+      clear: () => {
+        localStorage.removeItem('gymtoken');
+        localStorage.removeItem('gymuser');
+      },
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('gymtoken')
+      }),
+      requireAuth: () => {
+        if (!localStorage.getItem('gymtoken')) {
+          window.location.href = '/login';
+          return false;
         }
-    </script>
+        return true;
+      }
+    };
+
+    // ─── Toast Notifications ────────────────────────────────
+    function showToast(message, type = 'info') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const icons = { success: '✓', error: '✕', info: 'ℹ' };
+      toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-message">${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
+    }
+
+    // ─── Auth Gate ──────────────────────────────────────────
+    Auth.requireAuth();
+
+    // ─── Personalized Greeting ──────────────────────────────
+    const user = Auth.getUser();
+    const greetingEl = document.getElementById('greeting');
+    if (user && user.username) {
+      greetingEl.textContent = `Ready to crush it, ${user.username}?`;
+    }
+
+    // ─── Motivational Quotes ────────────────────────────────
+    const quotes = [
+      { text: "The only bad workout is the one that didn't happen.", author: "Unknown" },
+      { text: "No pain, no gain. Shut up and train.", author: "Unknown" },
+      { text: "The iron never lies to you. Two hundred pounds is always two hundred pounds.", author: "Henry Rollins" },
+      { text: "Strength does not come from the body. It comes from the will.", author: "Gandhi" },
+      { text: "The clock is ticking. Are you becoming the person you want to be?", author: "Greg Plitt" },
+      { text: "Success isn't always about greatness. It's about consistency.", author: "Dwayne Johnson" }
+    ];
+
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    document.getElementById('quote-text').textContent = `"${randomQuote.text}"`;
+    document.getElementById('quote-author').textContent = `— ${randomQuote.author}`;
+
+    // ─── Exit Animation ─────────────────────────────────────
+    function animateExit(e) {
+      e.preventDefault();
+      const container = document.getElementById('welcome-container');
+      container.style.transition = 'opacity 0.5s ease, transform 0.5s ease, filter 0.5s ease';
+      container.style.opacity = '0';
+      container.style.transform = 'scale(1.05)';
+      container.style.filter = 'blur(10px)';
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
+    }
+  </script>
 </body>
 </html>

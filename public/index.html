@@ -1,172 +1,460 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Tracker | Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymTracker | Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
-
 <body>
 
-    <nav>
-        <a href="/dashboard" class="active">Training Log</a>
-        <a href="/trophies">Trophy Room 🏆</a>
-        <a href="/" onclick="localStorage.clear()">Logout</a>
-    </nav>
+  <nav>
+    <a href="/dashboard" class="active">Dashboard</a>
+    <a href="/trophies">Trophy Room</a>
+    <a href="#" id="logout-btn">Logout</a>
+  </nav>
 
-    <div class="container">
-        <h1>COMMAND CENTER</h1>
+  <div class="container">
+    <h1 id="dashboard-title">COMMAND CENTER</h1>
 
-        <div class="glass-card">
-            <h3>Strength Progress</h3>
-            <div style="height: 300px;">
-                <canvas id="progressChart"></canvas>
-            </div>
-        </div>
-
-        <div class="glass-card">
-            <h3>Log Your Lift</h3>
-            <form id="workout-form">
-                <input type="text" id="exercise-name" placeholder="Which Exercise? (e.g. Deadlift)" required>
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="weight" placeholder="Weight (kg)" required style="flex: 1;">
-                    <input type="number" id="reps" placeholder="Reps" required style="flex: 1;">
-                </div>
-                <button type="submit">Save Progress</button>
-            </form>
-        </div>
-        <div class="glass-card">
-            <h3>Recent Activity</h3>
-            <div id="recent-sets-container">
-                <!-- Data populated here -->
-            </div>
-        </div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-workouts">0</div>
+        <div class="stat-label">Workouts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-sets">0</div>
+        <div class="stat-label">Total Sets</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-exercises">0</div>
+        <div class="stat-label">Exercises</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-pr">—</div>
+        <div class="stat-label">Top PR</div>
+      </div>
     </div>
 
-    <script>
-        const userId = localStorage.getItem('userId');
-        const username = localStorage.getItem('username');
+    <div class="glass-card">
+      <h3>Strength Progress</h3>
+      <div style="height:300px;">
+        <canvas id="progressChart"></canvas>
+      </div>
+    </div>
 
-        if (!userId) {
-            window.location.href = '/'; // Send to login if no auth
+    <div class="glass-card">
+      <h3>Log Your Lift</h3>
+      <form id="workout-form">
+        <input type="text" id="exercise-name" placeholder="Exercise name (e.g. Bench Press)" required />
+        <div style="display: flex; gap: 12px;">
+          <input type="number" id="weight" placeholder="Weight (kg)" step="0.5" min="0" required style="flex:1;" />
+          <input type="number" id="reps" placeholder="Reps" min="1" required style="flex:1;" />
+        </div>
+        <button type="submit">Save Set 💪</button>
+      </form>
+    </div>
+
+    <div class="glass-card">
+      <h3>Recent Activity</h3>
+      <div id="recent-sets-container"></div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Auth Helper ────────────────────────────────────────
+    const Auth = {
+      getToken: () => localStorage.getItem('gymtoken'),
+      getUser: () => JSON.parse(localStorage.getItem('gymuser') || 'null'),
+      setAuth: (token, user) => {
+        localStorage.setItem('gymtoken', token);
+        localStorage.setItem('gymuser', JSON.stringify(user));
+      },
+      clear: () => {
+        localStorage.removeItem('gymtoken');
+        localStorage.removeItem('gymuser');
+      },
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('gymtoken')
+      }),
+      requireAuth: () => {
+        if (!localStorage.getItem('gymtoken')) {
+          window.location.href = '/login';
+          return false;
+        }
+        return true;
+      }
+    };
+
+    // ─── Toast Notifications ────────────────────────────────
+    function showToast(message, type = 'info') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const icons = { success: '✓', error: '✕', info: 'ℹ' };
+      toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-message">${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
+    }
+
+    // ─── Fetch Helper ───────────────────────────────────────
+    async function apiFetch(url, options = {}) {
+      const headers = { 'Authorization': 'Bearer ' + Auth.getToken() };
+      if (options.body) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        Auth.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
+      return res;
+    }
+
+    // ─── Auth Gate ──────────────────────────────────────────
+    Auth.requireAuth();
+
+    // ─── Dashboard Title ────────────────────────────────────
+    const dashTitle = document.getElementById('dashboard-title');
+    const username = Auth.getUser()?.username || 'Athlete';
+    dashTitle.innerHTML = `COMMAND CENTER<br><span>Welcome back, ${username}</span>`;
+
+    // ─── Logout ─────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      Auth.clear();
+      window.location.href = '/login';
+    });
+
+    // ─── Animated Counter ───────────────────────────────────
+    function animateCounter(element, target, duration = 800) {
+      const start = performance.now();
+      const from = 0;
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = Math.round(from + (target - from) * eased);
+        element.textContent = current;
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.textContent = target;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    // ─── Load Stats ─────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await apiFetch('/api/stats');
+        const data = await res.json();
+
+        animateCounter(document.getElementById('stat-workouts'), data.totalWorkouts || 0);
+        animateCounter(document.getElementById('stat-sets'), data.totalSets || 0);
+        animateCounter(document.getElementById('stat-exercises'), data.uniqueExercises || 0);
+
+        const prEl = document.getElementById('stat-pr');
+        if (data.topPR && data.topPR.exercise_name) {
+          prEl.textContent = `${data.topPR.exercise_name} — ${data.topPR.max_weight} kg`;
+        } else {
+          prEl.textContent = '—';
+        }
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          showToast('Failed to load stats', 'error');
+        }
+      }
+    }
+
+    // ─── Load Chart ─────────────────────────────────────────
+    let progressChart = null;
+
+    async function loadChart() {
+      try {
+        const res = await apiFetch('/api/personal-records');
+        const data = await res.json();
+
+        const labels = data.map(r => r.exercise_name);
+        const weights = data.map(r => r.max_weight);
+
+        const canvas = document.getElementById('progressChart');
+        const ctx = canvas.getContext('2d');
+
+        if (progressChart) {
+          progressChart.destroy();
         }
 
-        // Add a small welcome text
-        document.querySelector('h1').innerHTML = `DASHBOARD' <br><span style="font-size: 0.5em; color: var(--accent-light);">Welcome, ${username}</span>`;
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(0, 255, 255, 0.3)');
+        gradient.addColorStop(1, 'rgba(0, 255, 255, 0.0)');
 
-        // 1. FETCH PR DATA AND DRAW THE GRAPH
-        let currentChart = null;
-        function loadChart() {
-            fetch('/api/personal-records?userId=' + userId)
-                .then(res => res.json())
-                .then(data => {
-                    const ctx = document.getElementById('progressChart').getContext('2d');
-                    if (currentChart) currentChart.destroy();
-
-
-                    // Create gradients for the cinematic look
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(0, 180, 216, 0.5)');
-                    gradient.addColorStop(1, 'rgba(0, 180, 216, 0)');
-
-                    currentChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: data.map(item => item.exercise_name),
-                            datasets: [{
-                                label: 'Max Weight (kg)',
-                                data: data.map(item => item.max_weight),
-                                borderColor: '#00b4d8',
-                                borderWidth: 3,
-                                tension: 0.4,
-                                fill: true,
-                                backgroundColor: gradient,
-                                pointBackgroundColor: '#00b4d8'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#aaa' } },
-                                x: { grid: { display: false }, ticks: { color: '#aaa' } }
-                            }
-                        }
-                    });
-                });
-        }
-
-        // 2. HANDLE FORM SUBMISSION
-        document.getElementById('workout-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const exerciseName = document.getElementById('exercise-name').value;
-            const weight = document.getElementById('weight').value;
-            const reps = document.getElementById('reps').value;
-
-            fetch('/api/add-set', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, exercise_name: exerciseName, weight: weight, reps: reps })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.isPR) {
-                        alert("🔥 BOOM! New Personal Record for " + exerciseName + "!");
-                    } else {
-                        alert("Workout Logged!");
-                    }
-                    loadChart();
-                    loadRecentSets();
-                })
-                .catch(err => alert("Error saving. Check your server.js and database!"));
+        progressChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Max Weight (kg)',
+              data: weights,
+              borderColor: '#00e5ff',
+              backgroundColor: gradient,
+              borderWidth: 2,
+              pointBackgroundColor: '#00e5ff',
+              pointBorderColor: '#00e5ff',
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  font: { family: 'Inter', size: 12 }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  font: { family: 'Inter', size: 11 },
+                  maxRotation: 45
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.06)'
+                }
+              },
+              y: {
+                ticks: {
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  font: { family: 'Inter', size: 11 }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.06)'
+                },
+                beginAtZero: true
+              }
+            }
+          }
         });
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          showToast('Failed to load chart', 'error');
+        }
+      }
+    }
 
-        // 3. LOAD RECENT SETS FOR DELETION
-        function loadRecentSets() {
-            fetch('/api/recent-sets?userId=' + userId)
-                .then(res => res.json())
-                .then(data => {
-                    const container = document.getElementById('recent-sets-container');
-                    if (data.length === 0) {
-                        container.innerHTML = "<p style='color: #bbb;'>No recent activity. Get lifting!</p>";
-                        return;
-                    }
+    // ─── Load Recent Sets ───────────────────────────────────
+    async function loadRecentSets() {
+      const container = document.getElementById('recent-sets-container');
+      try {
+        const res = await apiFetch('/api/recent-sets');
+        const data = await res.json();
 
-                    container.innerHTML = data.map(set => `
-                        <div class="recent-item">
-                            <div>
-                                <strong>${set.exercise_name}</strong> - ${set.weight_lifted}kg x ${set.reps_done} reps
-                            </div>
-                            <button class="delete-btn" onclick="deleteSet(${set.set_id})">X</button>
-                        </div>
-                    `).join('');
-                });
+        if (!data || data.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>No activity yet. Start lifting! 🏋️</p>
+            </div>
+          `;
+          return;
         }
 
-        // 4. DELETE A SET
-        window.deleteSet = function (setId) {
-            if (!confirm("Are you sure you want to delete this set?")) return;
+        container.innerHTML = data.map(set => `
+          <div class="recent-item" id="set-row-${set.set_id}">
+            <div class="recent-item-info">
+              <strong>${set.exercise_name}</strong>
+              <span>${set.weight_lifted} kg × ${set.reps_done} reps</span>
+            </div>
+            <div class="recent-item-actions">
+              <button class="edit-btn" onclick="editSet(${set.set_id}, '${set.exercise_name.replace(/'/g, "\\'")}', ${set.weight_lifted}, ${set.reps_done})" title="Edit set">✎</button>
+              <button class="delete-btn" onclick="deleteSet(${set.set_id})" title="Delete set">✕</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          container.innerHTML = '<div class="empty-state"><p>Failed to load recent sets.</p></div>';
+        }
+      }
+    }
 
-            fetch('/api/delete-set/' + setId, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        loadChart();
-                        loadRecentSets();
-                    }
-                });
+    // ─── Edit a Set (inline) ────────────────────────────────
+    window.editSet = function(setId, exerciseName, currentWeight, currentReps) {
+      const row = document.getElementById(`set-row-${setId}`);
+      if (!row) return;
+
+      row.classList.add('editing');
+      row.innerHTML = `
+        <div class="edit-form">
+          <div class="edit-form-inputs">
+            <strong>${exerciseName}</strong>
+            <input type="number" id="edit-weight-${setId}" value="${currentWeight}" step="0.5" min="0" max="999.99" placeholder="kg" />
+            <span style="color: var(--text-muted); font-size: 0.82rem;">kg ×</span>
+            <input type="number" id="edit-reps-${setId}" value="${currentReps}" min="1" max="999" placeholder="reps" />
+            <span style="color: var(--text-muted); font-size: 0.82rem;">reps</span>
+          </div>
+          <div class="edit-form-actions">
+            <button class="save-btn" onclick="saveEdit(${setId}, '${exerciseName.replace(/'/g, "\\'")}')" title="Save changes">✓</button>
+            <button class="cancel-btn" onclick="cancelEdit()" title="Cancel editing">✕</button>
+          </div>
+        </div>
+      `;
+
+      // Focus the weight input
+      const weightInput = document.getElementById(`edit-weight-${setId}`);
+      if (weightInput) weightInput.focus();
+    };
+
+    // ─── Save Edited Set ────────────────────────────────────
+    window.saveEdit = async function(setId, exerciseName) {
+      const weightInput = document.getElementById(`edit-weight-${setId}`);
+      const repsInput = document.getElementById(`edit-reps-${setId}`);
+
+      if (!weightInput || !repsInput) return;
+
+      const weight = parseFloat(weightInput.value);
+      const reps = parseInt(repsInput.value, 10);
+
+      if (isNaN(weight) || weight < 0 || weight > 999.99) {
+        showToast('Weight must be between 0 and 999.99 kg.', 'error');
+        return;
+      }
+      if (isNaN(reps) || reps < 1 || reps > 999) {
+        showToast('Reps must be between 1 and 999.', 'error');
+        return;
+      }
+
+      try {
+        const res = await apiFetch(`/api/update-set/${setId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ weight, reps })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(data.error || data.message || 'Failed to update set.', 'error');
+          return;
         }
 
-        // Initialize on load
+        if (data.isPR) {
+          showToast(`🔥 New PR for ${exerciseName}! ${weight}kg`, 'success');
+        } else {
+          showToast('Set updated successfully!', 'success');
+        }
+
+        loadStats();
         loadChart();
         loadRecentSets();
-    </script>
-</body>
+      } catch (err) {
+        console.error('Update error:', err);
+        if (err.message !== 'Session expired') {
+          showToast('Network error. Please try again.', 'error');
+        }
+      }
+    };
 
+    // ─── Cancel Edit ────────────────────────────────────────
+    window.cancelEdit = function() {
+      loadRecentSets();
+    };
+
+    // ─── Log a Set ──────────────────────────────────────────
+    document.getElementById('workout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const exercise_name = document.getElementById('exercise-name').value.trim();
+      const weight = parseFloat(document.getElementById('weight').value);
+      const reps = parseInt(document.getElementById('reps').value, 10);
+
+      if (!exercise_name || isNaN(weight) || isNaN(reps)) {
+        showToast('Please fill in all fields correctly.', 'error');
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/add-set', {
+          method: 'POST',
+          body: JSON.stringify({ exercise_name, weight, reps })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(data.error || data.message || 'Failed to save set.', 'error');
+          return;
+        }
+
+        if (data.isPR) {
+          showToast(`🔥 New PR for ${exercise_name}! ${weight}kg`, 'success');
+        } else {
+          showToast(data.message || 'Set saved successfully!', 'success');
+        }
+
+        document.getElementById('workout-form').reset();
+        loadStats();
+        loadChart();
+        loadRecentSets();
+      } catch (err) {
+        if (err.message !== 'Session expired') {
+          showToast('Network error. Please try again.', 'error');
+        }
+      }
+    });
+
+    // ─── Delete a Set ───────────────────────────────────────
+    window.deleteSet = async function(setId) {
+      if (!confirm('Are you sure you want to delete this set?')) {
+        return;
+      }
+
+      try {
+        const res = await apiFetch(`/api/delete-set/${setId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(data.error || data.message || 'Failed to delete set.', 'error');
+          return;
+        }
+
+        showToast('Set deleted successfully.', 'success');
+        loadStats();
+        loadChart();
+        loadRecentSets();
+      } catch (err) {
+        console.error('Delete error:', err);
+        if (err.message !== 'Session expired') {
+          showToast('Network error. Please try again.', 'error');
+        }
+      }
+    };
+
+    // ─── Initialize ─────────────────────────────────────────
+    loadStats();
+    loadChart();
+    loadRecentSets();
+  </script>
+</body>
 </html>
